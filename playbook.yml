@@ -1,0 +1,39 @@
+---
+
+- hosts: server1
+  become: true
+  pre_tasks:
+
+  - name: Creaing Certificate Authority directory
+    file:
+      path: "/etc/ssl"
+      state: directory
+      mode: 0700
+  - name: Creating PrivateKey
+    openssl_privatekey:
+      path: "/etc/ssl/private/key.pem"
+      size: 4096
+      mode: 0700
+    register: cakey
+
+  - name: Generating Certificate for CA
+    openssl_csr:
+      path: "/etc/ssl/private/cert.csr"
+      privatekey_path: "/etc/ssl/private/key.pem"
+      common_name: "rio"
+      country_name: "PH"
+      key_usage: keyCertSign
+    register: cacert
+
+  - name: self-sign for CA certification
+    openssl_certificate:
+      path: "/etc/ssl/cert.crt"
+      csr_path: "/etc/ssl/private/cert.csr"
+      privatekey_path: "/etc/ssl/private/key.pem"
+      provider: selfsigned
+    register: signed_cacert
+
+  - name: Copy CA cert to my Desktop
+    run_once: yes
+    fetch: src=/etc/ssl/cert.crt dest=~/CPE243_hoa9/ flat=yes
+    when: ansible_distribution == "Ubuntu"
